@@ -57,7 +57,9 @@ class PassbookParser {
     'OPP', 'NEAR', 'BEHIND', 'BESIDE', 'LTD', 'PVT',
     'OCCUPATION', 'PROFESSION', 'NOMINEE', 'FATHER', 'MOTHER',
     'HUSBAND', 'WIFE', 'SPOUSE', 'DOB', 'AGE', 'GENDER', 'SEX',
-    'EMAIL', 'UID', 'CUSTID',
+    'EMAIL', 'UID', 'CUSTID', 'MALE', 'FEMALE', 'SINGLE', 'JOINT',
+    'MINOR', 'MAJOR', 'INDIAN', 'SIGNATURE', 'AUTHORISED', 'SIGNATORY',
+    'VALID', 'MANAGER', 'ASST', 'OFFICER', 'MICR', 'ROUTING',
   ];
 
   /// Maps known IFSC prefixes (first 4 letters) to bank names.
@@ -205,15 +207,17 @@ class PassbookParser {
 
       final match = _accountLabelPattern.firstMatch(line);
       if (match != null) {
-        final afterLabelRaw = match.group(1)!.trim();
-        
-        // Skip false-positive section headers and unrelated fields
-        if (RegExp(r'^(?:OPENED|DETAILS|TYPE|HOLDER|STATUS|BALANCE|STATEMENT|SUMMARY)\b', caseSensitive: false).hasMatch(afterLabelRaw)) {
-            continue;
+        // Skip false-positive section headers and unrelated sentences anywhere in the line
+        if (RegExp(r'\b(?:OPENED|DETAILS|TYPE|HOLDER|STATUS|BALANCE|STATEMENT|SUMMARY|DATE|INFORMATION|ABOUT|VALID|SUBJECT|TOWARDS)\b', caseSensitive: false).hasMatch(line)) {
+            // But if the matched label explicitly includes "NO" or "NUMBER", it's probably legitimate, so we don't skip it.
+            if (!RegExp(r'\b(?:NO|NUMBER|NUM|N0)\b', caseSensitive: false).hasMatch(match.group(0)!)) {
+                continue;
+            }
         }
 
         print('[PassbookParser] Found Account Label on line: "$line"');
         // Strip spaces to allow finding space-separated accounts (e.g. "1234 5678 9012")
+        final afterLabelRaw = match.group(1)!.trim();
         final afterLabel = afterLabelRaw.replaceAll(RegExp(r'[\s\-]'), '');
         final sameLineDigits = _digitSequence.firstMatch(afterLabel);
         if (sameLineDigits != null) {
@@ -341,7 +345,7 @@ class PassbookParser {
       if (relationPattern.hasMatch(trimmed)) continue;
 
       final words = trimmed.split(RegExp(r'\s+'));
-      if (words.length < 2 || words.length > 4) continue;
+      if (words.length < 1 || words.length > 5) continue;
 
       if (!_isValidName(trimmed)) continue;
 
