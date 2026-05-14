@@ -49,6 +49,7 @@ class PassbookParser {
     'BRANCH', 'BANK', 'PASSBOOK', 'SAVINGS', 'CURRENT',
     'ACCOUNT', 'STATEMENT', 'DATE', 'BALANCE', 'INDIA',
     'LIMITED', 'NATIONAL', 'STATE', 'RESERVE', 'BRANCH',
+    'MOBILE', 'PHONE', 'CIF', 'PAN', 'AADHAAR', 'CODE', 'NUMBER',
   ];
 
   /// Maps known IFSC prefixes (first 4 letters) to bank names.
