@@ -1,5 +1,5 @@
 name: smart_reader
-description: "Smart Reader - An intelligent document reader with AI-powered features"
+description: "DocuScan - Card & Passbook OCR Scanner App"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,38 +9,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # UI & Design
-  cupertino_icons: ^1.0.8
-  google_fonts: ^6.2.1
-  flutter_animate: ^4.5.2
-  shimmer: ^3.0.0
-  cached_network_image: ^3.4.1
-  flutter_svg: ^2.0.17
-
-  # State Management
-  provider: ^6.1.5
-
-  # Storage & Database
-  shared_preferences: ^2.5.3
+  google_mlkit_text_recognition: ^0.13.0
+  camera: ^0.11.0+2
+  image_picker: ^1.1.2
+  permission_handler: ^11.3.1
   path_provider: ^2.1.5
-  sqflite: ^2.4.2
-
-  # File Handling
-  file_picker: ^8.1.7
-  open_file: ^3.5.9
-  
-  # PDF
-  syncfusion_flutter_pdfviewer: ^29.2.5
-  
-  # Text & Content
-  flutter_html: ^3.0.0-beta.2
-
-  # Utils
-  intl: ^0.20.2
-  uuid: ^4.5.1
-  url_launcher: ^6.3.1
-  path: ^1.9.1
+  flutter_riverpod: ^2.5.1
 
 dev_dependencies:
   flutter_test:
@@ -49,7 +23,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-  assets:
-    - assets/images/
-    - assets/icons/
