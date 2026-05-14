@@ -51,6 +51,10 @@ class PassbookParser {
     'LIMITED', 'NATIONAL', 'STATE', 'RESERVE', 'BRANCH',
     'MOBILE', 'PHONE', 'CIF', 'PAN', 'AADHAAR', 'CODE', 'NUMBER',
     'ADDRESS', 'DETAILS', 'IFSC', 'CUSTOMER', 'OPENED',
+    'DISTRICT', 'DIST', 'PIN', 'PINCODE', 'TALUKA', 'TEHSIL',
+    'NAGAR', 'ROAD', 'STREET', 'MARG', 'VILLAGE', 'POST', 'PO',
+    'CITY', 'STATE', 'COMPLEX', 'BUILDING', 'FLOOR', 'TOWER',
+    'OPP', 'NEAR', 'BEHIND', 'BESIDE', 'LTD', 'PVT',
   ];
 
   /// Maps known IFSC prefixes (first 4 letters) to bank names.
@@ -299,6 +303,11 @@ class PassbookParser {
 
       final match = _nameLabelPattern.firstMatch(line);
       if (match != null) {
+        // If the label line explicitly mentions BRANCH or BANK, it is the branch's name/address header, NOT the customer!
+        if (RegExp(r'\b(?:BRANCH|BANK)\b', caseSensitive: false).hasMatch(line)) {
+            continue;
+        }
+
         // Use group(1) to get everything AFTER the label, ignoring prefixes
         final afterLabel = match.group(1)!.trim();
         // Remove non-letters to clean up random symbols
