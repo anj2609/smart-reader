@@ -24,8 +24,7 @@ class CardParser {
     r'(?:^|[\s/\-])(\d{2})\s*[/\-]\s*(\d{2,4})(?:$|[\s/\-])',
   );
 
-  /// Matches a standalone 4-digit sequence that could be MMYY.
-  static final RegExp _fourDigitExpiry = RegExp(r'(?<!\d)(\d{4})(?!\d)');
+
 
   /// Matches lines that are entirely upper-case letters and spaces.
   static final RegExp _allCapsLine = RegExp(r'^[A-Z][A-Z ]{2,}$');
@@ -147,17 +146,6 @@ class CardParser {
       final result = _validateAndNormaliseExpiry(
         match.group(1)!,
         match.group(2)!,
-      );
-      if (result != null) return result;
-    }
-
-    // Fallback: look for standalone 4-digit sequences (MMYY).
-    final fourDigitMatches = _fourDigitExpiry.allMatches(text);
-    for (final match in fourDigitMatches) {
-      final seq = match.group(1)!;
-      final result = _validateAndNormaliseExpiry(
-        seq.substring(0, 2),
-        seq.substring(2),
       );
       if (result != null) return result;
     }
