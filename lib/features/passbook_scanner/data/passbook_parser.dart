@@ -66,6 +66,8 @@ class PassbookParser {
     'CAUTION', 'NOTE', 'IMPORTANT', 'USE', 'KEEP', 'SAFE', 'PROVIDED',
     'ISSUED', 'CASH', 'WITHDRAWAL', 'DEPOSIT', 'TRANSACTION', 'ONLINE',
     'INTERNET', 'BANKING', 'TERMS', 'CONDITIONS', 'SUBJECT', 'TOWARDS',
+    'NAME', 'HOLDER', 'HOLDERS', 'APPLICANT', 'APPLICANTS', 'USER',
+    'BENEFICIARY', 'PAYEE', 'DRAWER', 'CUST', 'AUTH',
   ];
 
   /// Maps known IFSC prefixes (first 4 letters) to bank names.
