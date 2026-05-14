@@ -154,11 +154,19 @@ class PassbookParser {
       return last6.contains(RegExp(r'\d'));
   }
 
-  /// Ensures the 5th character is '0' and returns uppercase
+  /// Ensures the 5th character is '0', returns uppercase, and fixes common OCR errors
   static String _normalizeIfsc(String raw) {
     var upper = raw.toUpperCase().replaceAll(RegExp(r'[\s\-]'), '');
     if (upper.length >= 5 && upper[4] == 'O') {
       upper = upper.replaceRange(4, 5, '0');
+    }
+    // Auto-correct common OCR misreads for popular bank prefixes
+    if (upper.startsWith('EBIN') || upper.startsWith('S8IN') || upper.startsWith('5BIN')) {
+        upper = 'SBIN' + upper.substring(4);
+    } else if (upper.startsWith('HDFO')) {
+        upper = 'HDFC' + upper.substring(4);
+    } else if (upper.startsWith('IC1C')) {
+        upper = 'ICIC' + upper.substring(4);
     }
     return upper;
   }
@@ -197,12 +205,13 @@ class PassbookParser {
             return sameLineDigits.group(0);
         }
 
-        // Try the next non-empty lines (look ahead up to 3 lines).
-        for (int j = i + 1; j < lines.length && j <= i + 3; j++) {
+        // Try the next non-empty lines (look ahead up to 10 lines to bypass interleaved text/labels).
+        for (int j = i + 1; j < lines.length && j <= i + 10; j++) {
           final nextLineOrig = lines[j];
           if (nextLineOrig.trim().isEmpty) continue;
 
-          // If this line explicitly belongs to another field (like CIF), skip it
+          // If this line explicitly belongs to another field (like CIF), completely SKIP the line
+          // so we don't extract its number, but CONTINUE looking ahead for the Account Number!
           if (_ignoreLabelsForAccount.hasMatch(nextLineOrig)) continue;
 
           final nextLine = nextLineOrig.replaceAll(RegExp(r'[\s\-]'), '');
