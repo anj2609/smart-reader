@@ -60,6 +60,7 @@ class PassbookParser {
     'EMAIL', 'UID', 'CUSTID', 'MALE', 'FEMALE', 'SINGLE', 'JOINT',
     'MINOR', 'MAJOR', 'INDIAN', 'SIGNATURE', 'AUTHORISED', 'SIGNATORY',
     'VALID', 'MANAGER', 'ASST', 'OFFICER', 'MICR', 'ROUTING',
+    'AMOUNT', 'PLEASE', 'DRAW', 'LINE', 'SPACE', 'LEFT', 'CHEQUE',
   ];
 
   /// Maps known IFSC prefixes (first 4 letters) to bank names.
@@ -207,6 +208,9 @@ class PassbookParser {
 
       final match = _accountLabelPattern.firstMatch(line);
       if (match != null) {
+        // Labels shouldn't be full paragraphs/sentences. 
+        if (line.length > 60) continue;
+
         // Skip false-positive section headers and unrelated sentences anywhere in the line
         if (RegExp(r'\b(?:OPENED|DETAILS|TYPE|HOLDER|STATUS|BALANCE|STATEMENT|SUMMARY|DATE|INFORMATION|ABOUT|VALID|SUBJECT|TOWARDS)\b', caseSensitive: false).hasMatch(line)) {
             // But if the matched label explicitly includes "NO" or "NUMBER", it's probably legitimate, so we don't skip it.
@@ -359,6 +363,8 @@ class PassbookParser {
   static bool _isValidName(String name) {
     if (name.isEmpty || name.length <= 2) return false;
     final words = name.split(RegExp(r'\s+'));
+    if (words.length > 5) return false;
+    
     final hasExcluded = words.any((w) {
       final cleanWord = w.replaceAll(RegExp(r'[^A-Za-z]'), '').toUpperCase();
       if (cleanWord.isEmpty) return false;
