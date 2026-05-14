@@ -18,7 +18,13 @@ class PassbookParser {
 
   /// Label-based account number keywords.
   static final RegExp _accountLabelPattern = RegExp(
-    r'(?:^|\s)(?:A/C|A\\C|ACC(?:T|NT)?|ACCOUNT)\.?\s*(?:NO|NUMBER|NUM|N0)?\.?(?:\s|[:\-\.]|$)[\s:\-\.]*(.*)',
+    r'(?:^|\W)(?:A/C|A\\C|A\s+C|ACC(?:T|NT)?|AC?COUNT)\.?\s*(?:NO|NUMBER|NUM|N0)?\.?(?:\s|[:\-\.]|$)[\s:\-\.]*(.*)',
+    caseSensitive: false,
+  );
+
+  /// Keywords that indicate a number on the same/next line is NOT an account number
+  static final RegExp _ignoreLabelsForAccount = RegExp(
+    r'\b(?:CIF|PAN|AADHAAR|MOBILE|PHONE|CUSTOMER\s*ID|CUST\s*ID|CRN|UAN|NAME|BRANCH|IFSC)\b',
     caseSensitive: false,
   );
 
@@ -177,10 +183,15 @@ class PassbookParser {
         final sameLineDigits = _digitSequence.firstMatch(afterLabel);
         if (sameLineDigits != null) return sameLineDigits.group(0);
 
-        // Try the next non-empty line.
-        for (int j = i + 1; j < lines.length && j <= i + 2; j++) {
-          final nextLine = lines[j].replaceAll(RegExp(r'[\s\-]'), '');
-          if (nextLine.isEmpty) continue;
+        // Try the next non-empty lines (look ahead up to 3 lines).
+        for (int j = i + 1; j < lines.length && j <= i + 3; j++) {
+          final nextLineOrig = lines[j];
+          if (nextLineOrig.trim().isEmpty) continue;
+
+          // If this line explicitly belongs to another field (like CIF), skip it
+          if (_ignoreLabelsForAccount.hasMatch(nextLineOrig)) continue;
+
+          final nextLine = nextLineOrig.replaceAll(RegExp(r'[\s\-]'), '');
           final nextDigits = _digitSequence.firstMatch(nextLine);
           if (nextDigits != null) return nextDigits.group(0);
         }
@@ -196,6 +207,9 @@ class PassbookParser {
     
     // Strip spaces per line before extracting digits to handle "1234 5678 9012"
     for (final line in text.split('\n')) {
+        // Ignore lines that clearly belong to other IDs
+        if (_ignoreLabelsForAccount.hasMatch(line)) continue;
+
         final cleanLine = line.replaceAll(RegExp(r'[\s\-]'), '');
         final allDigits = _digitSequence.allMatches(cleanLine).toList();
 
