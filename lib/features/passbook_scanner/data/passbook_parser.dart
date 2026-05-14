@@ -61,6 +61,11 @@ class PassbookParser {
     'MINOR', 'MAJOR', 'INDIAN', 'SIGNATURE', 'AUTHORISED', 'SIGNATORY',
     'VALID', 'MANAGER', 'ASST', 'OFFICER', 'MICR', 'ROUTING',
     'AMOUNT', 'PLEASE', 'DRAW', 'LINE', 'SPACE', 'LEFT', 'CHEQUE',
+    'FORMS', 'SHOULD', 'BE', 'USED', 'ONLY', 'BOOK', 'ATM', 'CARD',
+    'DEBIT', 'CREDIT', 'PASSWORD', 'NEVER', 'SHARE', 'WARNING',
+    'CAUTION', 'NOTE', 'IMPORTANT', 'USE', 'KEEP', 'SAFE', 'PROVIDED',
+    'ISSUED', 'CASH', 'WITHDRAWAL', 'DEPOSIT', 'TRANSACTION', 'ONLINE',
+    'INTERNET', 'BANKING', 'TERMS', 'CONDITIONS', 'SUBJECT', 'TOWARDS',
   ];
 
   /// Maps known IFSC prefixes (first 4 letters) to bank names.
@@ -234,13 +239,13 @@ class PassbookParser {
             }
         }
 
-        // Try the next non-empty lines (look ahead up to 10 lines to bypass interleaved text/labels).
-        for (int j = i + 1; j < lines.length && j <= i + 10; j++) {
+        List<String> lookaheadCandidates = [];
+        // Try the next non-empty lines (look ahead up to 6 lines to bypass interleaved text/labels).
+        for (int j = i + 1; j < lines.length && j <= i + 6; j++) {
           final nextLineOrig = lines[j];
           if (nextLineOrig.trim().isEmpty) continue;
 
           // If this line explicitly belongs to another field (like CIF), completely SKIP the line
-          // so we don't extract its number, but CONTINUE looking ahead for the Account Number!
           if (_ignoreLabelsForAccount.hasMatch(nextLineOrig)) continue;
 
           final nextLine = nextLineOrig.replaceAll(RegExp(r'[\s\-]'), '');
@@ -251,9 +256,24 @@ class PassbookParser {
                   print('[PassbookParser] Skipping next-line $digits as it looks like an SBI CIF number.');
                   continue;
               }
-              print('[PassbookParser] Extracted account from next line: $digits');
-              return digits;
+              lookaheadCandidates.add(digits);
           }
+        }
+
+        if (lookaheadCandidates.isNotEmpty) {
+            // Sort by length descending, so longest account numbers (usually the true one vs CIF) win.
+            lookaheadCandidates.sort((a, b) {
+                int lenCmp = b.length.compareTo(a.length);
+                if (lenCmp != 0) return lenCmp;
+                // If lengths are equal, prefer numbers starting with 1-6 over 7-9 (common for CIFs)
+                bool aIsAcct = RegExp(r'^[1-6]').hasMatch(a);
+                bool bIsAcct = RegExp(r'^[1-6]').hasMatch(b);
+                if (aIsAcct && !bIsAcct) return -1;
+                if (!aIsAcct && bIsAcct) return 1;
+                return 0;
+            });
+            print('[PassbookParser] Extracted account from lookahead: ${lookaheadCandidates.first}');
+            return lookaheadCandidates.first;
         }
       }
     }
@@ -342,7 +362,20 @@ class PassbookParser {
       }
     }
 
-    // Strategy 2: ALL-CAPS heuristic.
+    // Strategy 2: Honorific prefix heuristic.
+    // Extremely reliable: If a line starts with MR., MRS., MS., SHRI., etc., it's almost certainly the name!
+    final RegExp honorificPattern = RegExp(r'^(?:MR\.|MR|MRS\.|MRS|MS\.|MS|MISS|SHRI|SMT\.|SMT|KUMARI)\s+([A-Za-z\s]+)$', caseSensitive: false);
+    for (final line in lines) {
+      final match = honorificPattern.firstMatch(line.trim());
+      if (match != null) {
+          final possibleName = match.group(1)!.trim();
+          if (_isValidName(possibleName)) {
+              return _cleanNamePrefixes(line.trim()).toUpperCase();
+          }
+      }
+    }
+
+    // Strategy 3: ALL-CAPS heuristic.
     for (final line in lines) {
       final trimmed = line.trim();
       if (!_allCapsLine.hasMatch(trimmed)) continue;
