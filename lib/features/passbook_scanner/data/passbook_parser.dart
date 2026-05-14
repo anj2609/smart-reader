@@ -13,11 +13,12 @@ class PassbookParser {
   // ── Pre-compiled regular expressions ────────────────────────────
 
   /// IFSC code pattern: 4 uppercase letters + "0" + 6 alphanumeric chars.
-  static final RegExp _ifscPattern = RegExp(r'[A-Z]{4}0[A-Z0-9]{6}');
+  /// (Tolerates 'O' instead of '0' for the fifth character due to OCR, and handles spaces)
+  static final RegExp _ifscPattern = RegExp(r'[A-Z]{4}[0O][A-Z0-9]{6}', caseSensitive: false);
 
   /// Label-based account number keywords.
   static final RegExp _accountLabelPattern = RegExp(
-    r'(?:Account\s*(?:No|Number)|A\s*/\s*[Cc]\s*(?:No)?|Acc\s*No)',
+    r'(?:A/C|A\s*C|ACC|A\\C|ACCOUNT\s*(?:NO|NUMBER|NUM|N0)?)\s*[:\-]?\s*(.*)',
     caseSensitive: false,
   );
 
@@ -32,7 +33,7 @@ class PassbookParser {
 
   /// Name label keywords.
   static final RegExp _nameLabelPattern = RegExp(
-    r'(?:^|\s)(?:Name|Account\s*Holder|Customer\s*Name|Holder\s*Name)\s*[:\-]?\s*',
+    r'(?:NAME|ACCOUNT\s*HOLDER|CUSTOMER\s*NAME|HOLDER\s*NAME)\s*[:\-]?\s*(.*)',
     caseSensitive: false,
   );
 
@@ -94,9 +95,42 @@ class PassbookParser {
 
   /// Finds the first valid IFSC code in [text].
   static String? _extractIfsc(String text) {
+    // 1. Try matching on the original text (avoids "BANK OF INDIA" matching)
     final matches = _ifscPattern.allMatches(text);
-    if (matches.isEmpty) return null;
-    return matches.first.group(0);
+    if (matches.isNotEmpty) {
+      return _normalizeIfsc(matches.first.group(0)!);
+    }
+    
+    // 2. Try looking for the "IFSC" label specifically
+    final RegExp labelPattern = RegExp(r'IFSC\s*[:\-]?\s*([A-Z0-9\s]{11,15})', caseSensitive: false);
+    final labelMatch = labelPattern.firstMatch(text);
+    if (labelMatch != null) {
+        final cleanLabelled = labelMatch.group(1)!.replaceAll(RegExp(r'[\s\-]'), '');
+        if (_ifscPattern.hasMatch(cleanLabelled)) {
+            return _normalizeIfsc(cleanLabelled);
+        }
+    }
+
+    // 3. Fallback: strip spaces but enforce at least one digit to avoid false positives
+    final cleanText = text.replaceAll(RegExp(r'[\s\-]'), '');
+    final fallbackMatches = _ifscPattern.allMatches(cleanText);
+    for (final match in fallbackMatches) {
+        final code = match.group(0)!;
+        if (code.substring(5).contains(RegExp(r'\d'))) {
+            return _normalizeIfsc(code);
+        }
+    }
+
+    return null;
+  }
+
+  /// Ensures the 5th character is '0' and returns uppercase
+  static String _normalizeIfsc(String raw) {
+    var upper = raw.toUpperCase().replaceAll(RegExp(r'[\s\-]'), '');
+    if (upper.length >= 5 && upper[4] == 'O') {
+      upper = upper.replaceRange(4, 5, '0');
+    }
+    return upper;
   }
 
   /// Derives the bank name from the first 4 characters of [ifsc].
@@ -109,16 +143,9 @@ class PassbookParser {
   // ── Step 3 – Account number extraction ──────────────────────────
 
   /// Extracts the account number using a label-first strategy.
-  ///
-  /// 1. Looks for labelled account numbers first.
-  /// 2. Falls back to unlabelled digit sequences.
-  /// 3. Excludes phone numbers and IFSC-adjacent numbers.
   static String? _extractAccountNumber(String text, String? ifsc) {
-    // Strategy 1: label-based extraction.
     final labelled = _extractLabelledAccount(text);
     if (labelled != null) return labelled;
-
-    // Strategy 2: unlabelled digit sequences.
     return _extractUnlabelledAccount(text, ifsc);
   }
 
@@ -128,20 +155,23 @@ class PassbookParser {
 
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i];
-      if (!_accountLabelPattern.hasMatch(line)) continue;
+      // Exclude lines that talk about "Account Holder"
+      if (line.toLowerCase().contains('holder') || line.toLowerCase().contains('name')) continue;
 
-      // Try to find digits on the same line after the label.
-      final afterLabel =
-          line.replaceFirst(_accountLabelPattern, '').trim();
-      final sameLineDigits = _digitSequence.firstMatch(afterLabel);
-      if (sameLineDigits != null) return sameLineDigits.group(0);
+      final match = _accountLabelPattern.firstMatch(line);
+      if (match != null) {
+        // Strip spaces to allow finding space-separated accounts (e.g. "1234 5678 9012")
+        final afterLabel = match.group(1)!.replaceAll(RegExp(r'[\s\-]'), '');
+        final sameLineDigits = _digitSequence.firstMatch(afterLabel);
+        if (sameLineDigits != null) return sameLineDigits.group(0);
 
-      // Try the next non-empty line.
-      for (int j = i + 1; j < lines.length && j <= i + 2; j++) {
-        final nextLine = lines[j].trim();
-        if (nextLine.isEmpty) continue;
-        final nextDigits = _digitSequence.firstMatch(nextLine);
-        if (nextDigits != null) return nextDigits.group(0);
+        // Try the next non-empty line.
+        for (int j = i + 1; j < lines.length && j <= i + 2; j++) {
+          final nextLine = lines[j].replaceAll(RegExp(r'[\s\-]'), '');
+          if (nextLine.isEmpty) continue;
+          final nextDigits = _digitSequence.firstMatch(nextLine);
+          if (nextDigits != null) return nextDigits.group(0);
+        }
       }
     }
 
@@ -150,23 +180,24 @@ class PassbookParser {
 
   /// Finds digit sequences that are not phone numbers or IFSC-adjacent.
   static String? _extractUnlabelledAccount(String text, String? ifsc) {
-    final allDigits = _digitSequence.allMatches(text).toList();
     final candidates = <String>[];
+    
+    // Strip spaces per line before extracting digits to handle "1234 5678 9012"
+    for (final line in text.split('\n')) {
+        final cleanLine = line.replaceAll(RegExp(r'[\s\-]'), '');
+        final allDigits = _digitSequence.allMatches(cleanLine).toList();
 
-    for (final match in allDigits) {
-      final seq = match.group(0)!;
-
-      // Skip if it looks like a phone number.
-      if (seq.length == 10 && _phonePattern.hasMatch(seq)) continue;
-
-      // Skip if it is part of the IFSC code.
-      if (ifsc != null && ifsc.contains(seq)) continue;
-
-      candidates.add(seq);
+        for (final match in allDigits) {
+          final seq = match.group(0)!;
+          // Skip if it looks like a phone number.
+          if (seq.length == 10 && _phonePattern.hasMatch(seq)) continue;
+          // Skip if it is part of the IFSC code.
+          if (ifsc != null && ifsc.contains(seq)) continue;
+          candidates.add(seq);
+        }
     }
 
     if (candidates.isEmpty) return null;
-
     // Prefer the longest candidate.
     candidates.sort((a, b) => b.length.compareTo(a.length));
     return candidates.first;
@@ -181,24 +212,27 @@ class PassbookParser {
     // Strategy 1: label-based.
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
-      if (!_nameLabelPattern.hasMatch(line)) continue;
-
-      // Check for name on the same line after the label.
-      final afterLabel =
-          line.replaceFirst(_nameLabelPattern, '').trim();
-      if (afterLabel.isNotEmpty &&
-          RegExp(r'^[A-Za-z ]+$').hasMatch(afterLabel)) {
-        return afterLabel.toUpperCase();
-      }
-
-      // Try the next non-empty line.
-      for (int j = i + 1; j < lines.length && j <= i + 2; j++) {
-        final nextLine = lines[j].trim();
-        if (nextLine.isEmpty) continue;
-        if (RegExp(r'^[A-Za-z ]+$').hasMatch(nextLine)) {
-          return nextLine.toUpperCase();
+      final match = _nameLabelPattern.firstMatch(line);
+      if (match != null) {
+        // Use group(1) to get everything AFTER the label, ignoring prefixes
+        final afterLabel = match.group(1)!.trim();
+        // Remove non-letters to clean up random symbols
+        final cleaned = afterLabel.replaceAll(RegExp(r'[^A-Za-z ]'), '').trim();
+        
+        if (cleaned.isNotEmpty && cleaned.length > 2) {
+          return _cleanNamePrefixes(cleaned).toUpperCase();
         }
-        break;
+
+        // Try the next line.
+        for (int j = i + 1; j < lines.length && j <= i + 2; j++) {
+          final nextLine = lines[j].trim();
+          if (nextLine.isEmpty) continue;
+          final cleanedNext = nextLine.replaceAll(RegExp(r'[^A-Za-z ]'), '').trim();
+          if (cleanedNext.isNotEmpty && cleanedNext.length > 2) {
+            return _cleanNamePrefixes(cleanedNext).toUpperCase();
+          }
+          break;
+        }
       }
     }
 
@@ -221,11 +255,15 @@ class PassbookParser {
     return null;
   }
 
+  /// Removes common honorific prefixes from the extracted name
+  static String _cleanNamePrefixes(String name) {
+      final RegExp prefixPattern = RegExp(r'^(MR|MRS|MS|SHRI|SMT|DR|KUMARI)\s+', caseSensitive: false);
+      return name.replaceFirst(prefixPattern, '').trim();
+  }
+
   // ── Step 5 – Masking ────────────────────────────────────────────
 
   /// Masks the account number showing only the last 4 digits.
-  ///
-  /// Example: "12345678901" → "XXXXXXX8901".
   static String _maskAccountNumber(String number) {
     if (number.length <= 4) return number;
     final visible = number.substring(number.length - 4);
