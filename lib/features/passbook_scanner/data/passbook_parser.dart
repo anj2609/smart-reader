@@ -18,12 +18,12 @@ class PassbookParser {
 
   /// Label-based account number keywords.
   static final RegExp _accountLabelPattern = RegExp(
-    r'(?:A/C|A\s*C|ACC(?:T|NT)?|A\\C|AC?COUNT)(?:\.?\s*(?:NO|NUMBER|NUM|N0)\.?)?\s*[:\-]?\s*(.*)',
+    r'(?:^|\s)(?:A/C|A\\C|ACC(?:T|NT)?|ACCOUNT)\.?\s*(?:NO|NUMBER|NUM|N0)?\.?(?:\s|[:\-\.]|$)[\s:\-\.]*(.*)',
     caseSensitive: false,
   );
 
-  /// Digit sequences of length 9–18.
-  static final RegExp _digitSequence = RegExp(r'\d{9,18}');
+  /// Digit sequences of length 9–22.
+  static final RegExp _digitSequence = RegExp(r'\d{9,22}');
 
   /// 10-digit phone number starting with 6–9 (Indian mobile).
   static final RegExp _phonePattern = RegExp(r'^[6-9]\d{9}$');
