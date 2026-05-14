@@ -13,8 +13,8 @@ class PassbookParser {
   // ── Pre-compiled regular expressions ────────────────────────────
 
   /// IFSC code pattern: 4 uppercase letters + "0" + 6 alphanumeric chars.
-  /// (Tolerates 'O' instead of '0' for the fifth character due to OCR, and handles spaces)
-  static final RegExp _ifscPattern = RegExp(r'[A-Z]{4}[0O][A-Z0-9]{6}', caseSensitive: false);
+  /// (Tolerates 'O' instead of '0' for the fifth character due to OCR)
+  static final RegExp _ifscPattern = RegExp(r'\b[A-Z]{4}[0O][A-Z0-9]{6}\b', caseSensitive: false);
 
   /// Label-based account number keywords.
   static final RegExp _accountLabelPattern = RegExp(
@@ -33,7 +33,7 @@ class PassbookParser {
 
   /// Name label keywords.
   static final RegExp _nameLabelPattern = RegExp(
-    r'(?:NAME|ACCOUNT\s*HOLDER|CUSTOMER\s*NAME|HOLDER\s*NAME)\s*[:\-]?\s*(.*)',
+    r'(?:^|\s)(?:NAME|ACCOUNT\s*HOLDER|CUSTOMER\s*NAME|HOLDER\s*NAME)\s*[:\-]?\s*(.*)',
     caseSensitive: false,
   );
 
@@ -95,10 +95,11 @@ class PassbookParser {
 
   /// Finds the first valid IFSC code in [text].
   static String? _extractIfsc(String text) {
-    // 1. Try matching on the original text (avoids "BANK OF INDIA" matching)
+    // 1. Try matching on the original text with word boundaries
     final matches = _ifscPattern.allMatches(text);
-    if (matches.isNotEmpty) {
-      return _normalizeIfsc(matches.first.group(0)!);
+    for (final match in matches) {
+      final code = _normalizeIfsc(match.group(0)!);
+      if (_isValidIfsc(code)) return code;
     }
     
     // 2. Try looking for the "IFSC" label specifically
@@ -106,22 +107,35 @@ class PassbookParser {
     final labelMatch = labelPattern.firstMatch(text);
     if (labelMatch != null) {
         final cleanLabelled = labelMatch.group(1)!.replaceAll(RegExp(r'[\s\-]'), '');
-        if (_ifscPattern.hasMatch(cleanLabelled)) {
-            return _normalizeIfsc(cleanLabelled);
+        // Without word boundaries for the cleaned string
+        final RegExp loosePattern = RegExp(r'^[A-Z]{4}[0O][A-Z0-9]{6}$', caseSensitive: false);
+        if (loosePattern.hasMatch(cleanLabelled)) {
+            final code = _normalizeIfsc(cleanLabelled);
+            if (_isValidIfsc(code)) return code;
         }
     }
 
-    // 3. Fallback: strip spaces but enforce at least one digit to avoid false positives
+    // 3. Fallback: strip spaces but enforce strict validation
     final cleanText = text.replaceAll(RegExp(r'[\s\-]'), '');
-    final fallbackMatches = _ifscPattern.allMatches(cleanText);
+    final RegExp loosePattern = RegExp(r'[A-Z]{4}[0O][A-Z0-9]{6}', caseSensitive: false);
+    final fallbackMatches = loosePattern.allMatches(cleanText);
     for (final match in fallbackMatches) {
-        final code = match.group(0)!;
-        if (code.substring(5).contains(RegExp(r'\d'))) {
-            return _normalizeIfsc(code);
+        final code = _normalizeIfsc(match.group(0)!);
+        // Only accept fallback if the prefix is in our known bank map OR the last 6 chars have multiple digits
+        if (_ifscBankMap.containsKey(code.substring(0, 4)) || code.substring(5).replaceAll(RegExp(r'[^\d]'), '').length >= 3) {
+            return code;
         }
     }
 
     return null;
+  }
+
+  /// Helper to validate IFSC (must have digits in the last 6 chars to avoid plain words)
+  static bool _isValidIfsc(String code) {
+      if (code.length != 11) return false;
+      final last6 = code.substring(5);
+      // Ensure there is at least one digit in the last 6 characters to avoid English words
+      return last6.contains(RegExp(r'\d'));
   }
 
   /// Ensures the 5th character is '0' and returns uppercase
@@ -208,10 +222,15 @@ class PassbookParser {
   /// Extracts the account holder name using label-first + heuristic.
   static String? _extractName(String text) {
     final lines = text.split('\n');
+    final RegExp relationPattern = RegExp(r'\b[WSDC]/O\b', caseSensitive: false);
 
     // Strategy 1: label-based.
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
+      
+      // Ignore "Wife of", "Son of", "Daughter of" lines
+      if (relationPattern.hasMatch(line)) continue;
+
       final match = _nameLabelPattern.firstMatch(line);
       if (match != null) {
         // Use group(1) to get everything AFTER the label, ignoring prefixes
@@ -226,7 +245,8 @@ class PassbookParser {
         // Try the next line.
         for (int j = i + 1; j < lines.length && j <= i + 2; j++) {
           final nextLine = lines[j].trim();
-          if (nextLine.isEmpty) continue;
+          if (nextLine.isEmpty || relationPattern.hasMatch(nextLine)) continue;
+          
           final cleanedNext = nextLine.replaceAll(RegExp(r'[^A-Za-z ]'), '').trim();
           if (cleanedNext.isNotEmpty && cleanedNext.length > 2) {
             return _cleanNamePrefixes(cleanedNext).toUpperCase();
@@ -240,6 +260,7 @@ class PassbookParser {
     for (final line in lines) {
       final trimmed = line.trim();
       if (!_allCapsLine.hasMatch(trimmed)) continue;
+      if (relationPattern.hasMatch(trimmed)) continue;
 
       final words = trimmed.split(RegExp(r'\s+'));
       if (words.length < 2 || words.length > 4) continue;
