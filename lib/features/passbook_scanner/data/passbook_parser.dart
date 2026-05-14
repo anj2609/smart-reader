@@ -18,7 +18,7 @@ class PassbookParser {
 
   /// Label-based account number keywords.
   static final RegExp _accountLabelPattern = RegExp(
-    r'(?:^|\W)(?:A/C|A\\C|A\s+C|ACC(?:T|NT)?|AC?COUNT)\.?\s*(?:NO|NUMBER|NUM|N0)?\.?(?:\s|[:\-\.]|$)[\s:\-\.]*(.*)',
+    r'(?:^|\W)(?:A/C|A\\C|A\s+C|AC\b|ACT\b|ACC(?:T|NT)?\b|AC?COUNT)\.?\s*(?:NO|NUMBER|NUM|N0)?\.?(?:\s|[:\-\.]|$)[\s:\-\.]*(.*)',
     caseSensitive: false,
   );
 
@@ -28,8 +28,9 @@ class PassbookParser {
     caseSensitive: false,
   );
 
-  /// Digit sequences of length 9–22.
-  static final RegExp _digitSequence = RegExp(r'\d{9,22}');
+  /// Digit sequences of length 9–18, using lookaround to prevent partial matches
+  /// on massive barcode/OCR artifacts (e.g., won't extract 18 digits from a 22 digit string).
+  static final RegExp _digitSequence = RegExp(r'(?<!\d)\d{9,18}(?!\d)');
 
   /// 10-digit phone number starting with 6–9 (Indian mobile).
   static final RegExp _phonePattern = RegExp(r'^[6-9]\d{9}$');
@@ -81,10 +82,19 @@ class PassbookParser {
   /// Returns a [BankDetails] with nullable fields set to `null`
   /// when parsing fails for a particular field.
   static BankDetails parsePassbook(String rawText) {
+    print('\n[PassbookParser] Starting extraction...');
     final ifsc = _extractIfsc(rawText);
+    print('[PassbookParser] Extracted IFSC: $ifsc');
+    
     final bankName = _deriveBankName(ifsc);
+    print('[PassbookParser] Derived Bank Name: $bankName');
+    
     final accountNumber = _extractAccountNumber(rawText, ifsc);
+    print('[PassbookParser] Extracted Account: $accountNumber');
+    
     final name = _extractName(rawText);
+    print('[PassbookParser] Extracted Name: $name');
+    
     final masked =
         accountNumber != null ? _maskAccountNumber(accountNumber) : null;
 
@@ -178,10 +188,14 @@ class PassbookParser {
 
       final match = _accountLabelPattern.firstMatch(line);
       if (match != null) {
+        print('[PassbookParser] Found Account Label on line: "$line"');
         // Strip spaces to allow finding space-separated accounts (e.g. "1234 5678 9012")
         final afterLabel = match.group(1)!.replaceAll(RegExp(r'[\s\-]'), '');
         final sameLineDigits = _digitSequence.firstMatch(afterLabel);
-        if (sameLineDigits != null) return sameLineDigits.group(0);
+        if (sameLineDigits != null) {
+            print('[PassbookParser] Extracted account from same line: ${sameLineDigits.group(0)}');
+            return sameLineDigits.group(0);
+        }
 
         // Try the next non-empty lines (look ahead up to 3 lines).
         for (int j = i + 1; j < lines.length && j <= i + 3; j++) {
@@ -193,11 +207,15 @@ class PassbookParser {
 
           final nextLine = nextLineOrig.replaceAll(RegExp(r'[\s\-]'), '');
           final nextDigits = _digitSequence.firstMatch(nextLine);
-          if (nextDigits != null) return nextDigits.group(0);
+          if (nextDigits != null) {
+              print('[PassbookParser] Extracted account from next line: ${nextDigits.group(0)}');
+              return nextDigits.group(0);
+          }
         }
       }
     }
 
+    print('[PassbookParser] Label extraction failed. Falling back to unlabelled.');
     return null;
   }
 
@@ -223,9 +241,14 @@ class PassbookParser {
         }
     }
 
-    if (candidates.isEmpty) return null;
+    if (candidates.isEmpty) {
+        print('[PassbookParser] Unlabelled extraction found 0 candidates.');
+        return null;
+    }
+    
     // Prefer the longest candidate.
     candidates.sort((a, b) => b.length.compareTo(a.length));
+    print('[PassbookParser] Unlabelled candidates sorted by length: $candidates');
     return candidates.first;
   }
 
