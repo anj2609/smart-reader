@@ -1,16 +1,67 @@
-# smart_reader
+# Smart Reader 📚
 
-A new Flutter project.
+A beautiful, feature-rich document reader app built with Flutter. Smart Reader provides an intelligent reading experience with PDF support, bookmarks, reading progress tracking, and a premium UI.
 
-## Getting Started
+## ✨ Features
 
-This project is a starting point for a Flutter application.
+- **📖 Multi-format Support** – Read PDFs, text files, and markdown documents
+- **🔖 Smart Bookmarks** – Save pages with notes for quick reference
+- **📊 Reading Stats** – Track your reading progress and streaks
+- **🎨 Customizable Reader** – Adjust font size, line spacing, and choose from 4 reader themes (Dark, Light, Sepia, AMOLED)
+- **🌙 Dark/Light Mode** – Full theme support with gorgeous UI
+- **📁 Library Management** – Organize documents with categories, favorites, and search
+- **🔍 Smart Search** – Find documents instantly by title or author
+- **✨ Smooth Animations** – Polished micro-animations throughout the app
 
-A few resources to get you started if this is your first Flutter project:
+## 🏗️ Architecture
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```
+lib/
+├── core/
+│   ├── constants/     # App-wide constants
+│   ├── theme/         # Colors & theme configuration
+│   └── utils/         # Database helper & utilities
+├── models/            # Data models (Document, Bookmark, ReadingStats)
+├── providers/         # State management (Theme, Document, ReaderSettings)
+├── screens/
+│   ├── splash/        # Animated splash screen
+│   ├── onboarding/    # 3-page onboarding flow
+│   ├── home/          # Dashboard with stats & recent docs
+│   ├── library/       # Document library with grid/list views
+│   ├── reader/        # PDF & text reader with settings
+│   ├── search/        # Real-time document search
+│   ├── bookmarks/     # Bookmark management
+│   └── settings/      # App settings & preferences
+└── widgets/           # Reusable UI components
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 🛠️ Tech Stack
+
+- **Flutter 3.38.6** with Material 3
+- **Provider** for state management
+- **SQLite** (sqflite) for local persistence
+- **Syncfusion PDF Viewer** for PDF rendering
+- **Google Fonts** for Poppins typography
+- **Flutter Animate** for smooth animations
+- **SharedPreferences** for settings persistence
+
+## 🚀 Getting Started
+
+```bash
+# Clone the repository
+git clone <repo-url>
+
+# Install dependencies
+flutter pub get
+
+# Run the app
+flutter run
+```
+
+## 📱 Screenshots
+
+Coming soon...
+
+## 📄 License
+
+This project is open source and available under the MIT License.
