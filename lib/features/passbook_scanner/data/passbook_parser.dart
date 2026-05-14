@@ -18,7 +18,7 @@ class PassbookParser {
 
   /// Label-based account number keywords.
   static final RegExp _accountLabelPattern = RegExp(
-    r'(?:A/C|A\s*C|ACC|A\\C|ACCOUNT\s*(?:NO|NUMBER|NUM|N0)?)\s*[:\-]?\s*(.*)',
+    r'(?:A/C|A\s*C|ACC(?:T|NT)?|A\\C|AC?COUNT)(?:\.?\s*(?:NO|NUMBER|NUM|N0)\.?)?\s*[:\-]?\s*(.*)',
     caseSensitive: false,
   );
 
@@ -169,8 +169,6 @@ class PassbookParser {
 
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i];
-      // Exclude lines that talk about "Account Holder"
-      if (line.toLowerCase().contains('holder') || line.toLowerCase().contains('name')) continue;
 
       final match = _accountLabelPattern.firstMatch(line);
       if (match != null) {
