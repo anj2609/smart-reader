@@ -183,13 +183,13 @@ class PassbookParser {
 
   /// Extracts the account number using a label-first strategy.
   static String? _extractAccountNumber(String text, String? ifsc) {
-    final labelled = _extractLabelledAccount(text);
+    final labelled = _extractLabelledAccount(text, ifsc);
     if (labelled != null) return labelled;
     return _extractUnlabelledAccount(text, ifsc);
   }
 
   /// Searches for account number labels and extracts the following number.
-  static String? _extractLabelledAccount(String text) {
+  static String? _extractLabelledAccount(String text, String? ifsc) {
     final lines = text.split('\n');
 
     for (int i = 0; i < lines.length; i++) {
@@ -202,8 +202,13 @@ class PassbookParser {
         final afterLabel = match.group(1)!.replaceAll(RegExp(r'[\s\-]'), '');
         final sameLineDigits = _digitSequence.firstMatch(afterLabel);
         if (sameLineDigits != null) {
-            print('[PassbookParser] Extracted account from same line: ${sameLineDigits.group(0)}');
-            return sameLineDigits.group(0);
+            final digits = sameLineDigits.group(0)!;
+            if (ifsc != null && ifsc.startsWith('SBIN') && digits.length == 11 && RegExp(r'^[789]').hasMatch(digits)) {
+                print('[PassbookParser] Skipping same-line $digits as it looks like an SBI CIF number.');
+            } else {
+                print('[PassbookParser] Extracted account from same line: $digits');
+                return digits;
+            }
         }
 
         // Try the next non-empty lines (look ahead up to 10 lines to bypass interleaved text/labels).
@@ -218,8 +223,13 @@ class PassbookParser {
           final nextLine = nextLineOrig.replaceAll(RegExp(r'[\s\-]'), '');
           final nextDigits = _digitSequence.firstMatch(nextLine);
           if (nextDigits != null) {
-              print('[PassbookParser] Extracted account from next line: ${nextDigits.group(0)}');
-              return nextDigits.group(0);
+              final digits = nextDigits.group(0)!;
+              if (ifsc != null && ifsc.startsWith('SBIN') && digits.length == 11 && RegExp(r'^[789]').hasMatch(digits)) {
+                  print('[PassbookParser] Skipping next-line $digits as it looks like an SBI CIF number.');
+                  continue;
+              }
+              print('[PassbookParser] Extracted account from next line: $digits');
+              return digits;
           }
         }
       }
@@ -247,6 +257,9 @@ class PassbookParser {
           if (seq.length == 10 && _phonePattern.hasMatch(seq)) continue;
           // Skip if it is part of the IFSC code.
           if (ifsc != null && ifsc.contains(seq)) continue;
+          // Skip SBI CIF numbers
+          if (ifsc != null && ifsc.startsWith('SBIN') && seq.length == 11 && RegExp(r'^[789]').hasMatch(seq)) continue;
+          
           candidates.add(seq);
         }
     }
