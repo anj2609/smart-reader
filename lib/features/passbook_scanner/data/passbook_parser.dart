@@ -304,7 +304,7 @@ class PassbookParser {
         // Remove non-letters to clean up random symbols
         final cleaned = afterLabel.replaceAll(RegExp(r'[^A-Za-z ]'), '').trim();
         
-        if (cleaned.isNotEmpty && cleaned.length > 2) {
+        if (_isValidName(cleaned)) {
           return _cleanNamePrefixes(cleaned).toUpperCase();
         }
 
@@ -314,7 +314,7 @@ class PassbookParser {
           if (nextLine.isEmpty || relationPattern.hasMatch(nextLine)) continue;
           
           final cleanedNext = nextLine.replaceAll(RegExp(r'[^A-Za-z ]'), '').trim();
-          if (cleanedNext.isNotEmpty && cleanedNext.length > 2) {
+          if (_isValidName(cleanedNext)) {
             return _cleanNamePrefixes(cleanedNext).toUpperCase();
           }
           break;
@@ -331,16 +331,24 @@ class PassbookParser {
       final words = trimmed.split(RegExp(r'\s+'));
       if (words.length < 2 || words.length > 4) continue;
 
-      final hasExcluded = words.any((w) {
-        final cleanWord = w.replaceAll(RegExp(r'[^A-Za-z]'), '').toUpperCase();
-        return _nameExcludeKeywords.contains(cleanWord);
-      });
-      if (hasExcluded) continue;
+      if (!_isValidName(trimmed)) continue;
 
       return trimmed;
     }
 
     return null;
+  }
+
+  /// Helper to validate if a string looks like a real name and doesn't contain excluded keywords
+  static bool _isValidName(String name) {
+    if (name.isEmpty || name.length <= 2) return false;
+    final words = name.split(RegExp(r'\s+'));
+    final hasExcluded = words.any((w) {
+      final cleanWord = w.replaceAll(RegExp(r'[^A-Za-z]'), '').toUpperCase();
+      if (cleanWord.isEmpty) return false;
+      return _nameExcludeKeywords.contains(cleanWord);
+    });
+    return !hasExcluded;
   }
 
   /// Removes common honorific prefixes from the extracted name
