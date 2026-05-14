@@ -55,6 +55,9 @@ class PassbookParser {
     'NAGAR', 'ROAD', 'STREET', 'MARG', 'VILLAGE', 'POST', 'PO',
     'CITY', 'STATE', 'COMPLEX', 'BUILDING', 'FLOOR', 'TOWER',
     'OPP', 'NEAR', 'BEHIND', 'BESIDE', 'LTD', 'PVT',
+    'OCCUPATION', 'PROFESSION', 'NOMINEE', 'FATHER', 'MOTHER',
+    'HUSBAND', 'WIFE', 'SPOUSE', 'DOB', 'AGE', 'GENDER', 'SEX',
+    'EMAIL', 'UID', 'CUSTID',
   ];
 
   /// Maps known IFSC prefixes (first 4 letters) to bank names.
