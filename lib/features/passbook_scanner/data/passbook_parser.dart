@@ -50,6 +50,7 @@ class PassbookParser {
     'ACCOUNT', 'STATEMENT', 'DATE', 'BALANCE', 'INDIA',
     'LIMITED', 'NATIONAL', 'STATE', 'RESERVE', 'BRANCH',
     'MOBILE', 'PHONE', 'CIF', 'PAN', 'AADHAAR', 'CODE', 'NUMBER',
+    'ADDRESS', 'DETAILS', 'IFSC', 'CUSTOMER', 'OPENED',
   ];
 
   /// Maps known IFSC prefixes (first 4 letters) to bank names.
@@ -197,9 +198,16 @@ class PassbookParser {
 
       final match = _accountLabelPattern.firstMatch(line);
       if (match != null) {
+        final afterLabelRaw = match.group(1)!.trim();
+        
+        // Skip false-positive section headers and unrelated fields
+        if (RegExp(r'^(?:OPENED|DETAILS|TYPE|HOLDER|STATUS|BALANCE|STATEMENT|SUMMARY)\b', caseSensitive: false).hasMatch(afterLabelRaw)) {
+            continue;
+        }
+
         print('[PassbookParser] Found Account Label on line: "$line"');
         // Strip spaces to allow finding space-separated accounts (e.g. "1234 5678 9012")
-        final afterLabel = match.group(1)!.replaceAll(RegExp(r'[\s\-]'), '');
+        final afterLabel = afterLabelRaw.replaceAll(RegExp(r'[\s\-]'), '');
         final sameLineDigits = _digitSequence.firstMatch(afterLabel);
         if (sameLineDigits != null) {
             final digits = sameLineDigits.group(0)!;
@@ -323,9 +331,10 @@ class PassbookParser {
       final words = trimmed.split(RegExp(r'\s+'));
       if (words.length < 2 || words.length > 4) continue;
 
-      final hasExcluded = words.any(
-        (w) => _nameExcludeKeywords.contains(w.toUpperCase()),
-      );
+      final hasExcluded = words.any((w) {
+        final cleanWord = w.replaceAll(RegExp(r'[^A-Za-z]'), '').toUpperCase();
+        return _nameExcludeKeywords.contains(cleanWord);
+      });
       if (hasExcluded) continue;
 
       return trimmed;
