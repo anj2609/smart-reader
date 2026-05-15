@@ -28,6 +28,6 @@ flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
   remove_alpha_ios: true
-  image_path: "web/icons/banking-system-padded.png"
+  image_path: "web/icons/banking-system-ios.png"
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "web/icons/banking-system-padded.png"
+  adaptive_icon_foreground: "web/icons/banking-system-android.png"
