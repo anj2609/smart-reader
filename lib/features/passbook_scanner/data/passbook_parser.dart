@@ -14,7 +14,10 @@ class PassbookParser {
 
   /// IFSC code pattern: 4 uppercase letters + "0" + 6 alphanumeric chars.
   /// (Tolerates 'O' instead of '0' for the fifth character due to OCR)
-  static final RegExp _ifscPattern = RegExp(r'\b[A-Z]{4}[0O][A-Z0-9]{6}\b', caseSensitive: false);
+  static final RegExp _ifscPattern = RegExp(
+    r'\b[A-Z]{4}[0O][A-Z0-9]{6}\b',
+    caseSensitive: false,
+  );
 
   /// Label-based account number keywords.
   static final RegExp _accountLabelPattern = RegExp(
@@ -46,28 +49,140 @@ class PassbookParser {
 
   /// Keywords to exclude from name candidates.
   static const List<String> _nameExcludeKeywords = [
-    'BRANCH', 'BANK', 'PASSBOOK', 'SAVINGS', 'CURRENT',
-    'ACCOUNT', 'STATEMENT', 'DATE', 'BALANCE', 'INDIA',
-    'LIMITED', 'NATIONAL', 'STATE', 'RESERVE', 'BRANCH',
-    'MOBILE', 'PHONE', 'CIF', 'PAN', 'AADHAAR', 'CODE', 'NUMBER',
-    'ADDRESS', 'DETAILS', 'IFSC', 'CUSTOMER', 'OPENED',
-    'DISTRICT', 'DIST', 'PIN', 'PINCODE', 'TALUKA', 'TEHSIL',
-    'NAGAR', 'ROAD', 'STREET', 'MARG', 'VILLAGE', 'POST', 'PO',
-    'CITY', 'STATE', 'COMPLEX', 'BUILDING', 'FLOOR', 'TOWER',
-    'OPP', 'NEAR', 'BEHIND', 'BESIDE', 'LTD', 'PVT',
-    'OCCUPATION', 'PROFESSION', 'NOMINEE', 'FATHER', 'MOTHER',
-    'HUSBAND', 'WIFE', 'SPOUSE', 'DOB', 'AGE', 'GENDER', 'SEX',
-    'EMAIL', 'UID', 'CUSTID', 'MALE', 'FEMALE', 'SINGLE', 'JOINT',
-    'MINOR', 'MAJOR', 'INDIAN', 'SIGNATURE', 'AUTHORISED', 'SIGNATORY',
-    'VALID', 'MANAGER', 'ASST', 'OFFICER', 'MICR', 'ROUTING',
-    'AMOUNT', 'PLEASE', 'DRAW', 'LINE', 'SPACE', 'LEFT', 'CHEQUE',
-    'FORMS', 'SHOULD', 'BE', 'USED', 'ONLY', 'BOOK', 'ATM', 'CARD',
-    'DEBIT', 'CREDIT', 'PASSWORD', 'NEVER', 'SHARE', 'WARNING',
-    'CAUTION', 'NOTE', 'IMPORTANT', 'USE', 'KEEP', 'SAFE', 'PROVIDED',
-    'ISSUED', 'CASH', 'WITHDRAWAL', 'DEPOSIT', 'TRANSACTION', 'ONLINE',
-    'INTERNET', 'BANKING', 'TERMS', 'CONDITIONS', 'SUBJECT', 'TOWARDS',
-    'NAME', 'HOLDER', 'HOLDERS', 'APPLICANT', 'APPLICANTS', 'USER',
-    'BENEFICIARY', 'PAYEE', 'DRAWER', 'CUST', 'AUTH',
+    'BRANCH',
+    'BANK',
+    'PASSBOOK',
+    'SAVINGS',
+    'CURRENT',
+    'ACCOUNT',
+    'STATEMENT',
+    'DATE',
+    'BALANCE',
+    'INDIA',
+    'LIMITED',
+    'NATIONAL',
+    'STATE',
+    'RESERVE',
+    'BRANCH',
+    'MOBILE',
+    'PHONE',
+    'CIF',
+    'PAN',
+    'AADHAAR',
+    'CODE',
+    'NUMBER',
+    'ADDRESS',
+    'DETAILS',
+    'IFSC',
+    'CUSTOMER',
+    'OPENED',
+    'DISTRICT',
+    'DIST',
+    'PIN',
+    'PINCODE',
+    'TALUKA',
+    'TEHSIL',
+    'NAGAR',
+    'ROAD',
+    'STREET',
+    'MARG',
+    'VILLAGE',
+    'POST',
+    'PO',
+    'CITY',
+    'STATE',
+    'COMPLEX',
+    'BUILDING',
+    'FLOOR',
+    'TOWER',
+    'OPP',
+    'NEAR',
+    'BEHIND',
+    'BESIDE',
+    'LTD',
+    'PVT',
+    'OCCUPATION',
+    'PROFESSION',
+    'NOMINEE',
+    'FATHER',
+    'MOTHER',
+    'HUSBAND',
+    'WIFE',
+    'SPOUSE',
+    'DOB',
+    'AGE',
+    'GENDER',
+    'SEX',
+    'EMAIL',
+    'UID',
+    'CUSTID',
+    'MALE',
+    'FEMALE',
+    'SINGLE',
+    'JOINT',
+    'MINOR',
+    'MAJOR',
+    'INDIAN',
+    'SIGNATURE',
+    'AUTHORISED',
+    'SIGNATORY',
+    'VALID',
+    'MANAGER',
+    'ASST',
+    'OFFICER',
+    'MICR',
+    'ROUTING',
+    'AMOUNT',
+    'PLEASE',
+    'DRAW',
+    'LINE',
+    'SPACE',
+    'LEFT',
+    'CHEQUE',
+    'FORMS',
+    'SHOULD',
+    'BE',
+    'USED',
+    'ONLY',
+    'BOOK',
+    'ATM',
+    'CARD',
+    'DEBIT',
+    'CREDIT',
+    'PASSWORD',
+    'NEVER',
+    'SHARE',
+    'WARNING',
+    'CAUTION',
+    'NOTE',
+    'IMPORTANT',
+    'USE',
+    'KEEP',
+    'SAFE',
+    'PROVIDED',
+    'ISSUED',
+    'CASH',
+    'WITHDRAWAL',
+    'DEPOSIT',
+    'TRANSACTION',
+    'ONLINE',
+    'INTERNET',
+    'BANKING',
+    'TERMS',
+    'CONDITIONS',
+    'SUBJECT',
+    'TOWARDS',
+    'NAME',
+    'HOLDER',
+    'HOLDERS',
+    'APPLICANT',
+    'APPLICANTS',
+    'USER',
+    'BENEFICIARY',
+    'PAYEE',
+    'DRAWER',
+    'CUST',
+    'AUTH',
   ];
 
   /// Maps known IFSC prefixes (first 4 letters) to bank names.
@@ -104,18 +219,19 @@ class PassbookParser {
     print('\n[PassbookParser] Starting extraction...');
     final ifsc = _extractIfsc(rawText);
     print('[PassbookParser] Extracted IFSC: $ifsc');
-    
+
     final bankName = _deriveBankName(ifsc);
     print('[PassbookParser] Derived Bank Name: $bankName');
-    
+
     final accountNumber = _extractAccountNumber(rawText, ifsc);
     print('[PassbookParser] Extracted Account: $accountNumber');
-    
+
     final name = _extractName(rawText);
     print('[PassbookParser] Extracted Name: $name');
-    
-    final masked =
-        accountNumber != null ? _maskAccountNumber(accountNumber) : null;
+
+    final masked = accountNumber != null
+        ? _maskAccountNumber(accountNumber)
+        : null;
 
     return BankDetails(
       accountHolderName: name,
@@ -136,30 +252,42 @@ class PassbookParser {
       final code = _normalizeIfsc(match.group(0)!);
       if (_isValidIfsc(code)) return code;
     }
-    
+
     // 2. Try looking for the "IFSC" label specifically
-    final RegExp labelPattern = RegExp(r'IFSC\s*[:\-]?\s*([A-Z0-9\s]{11,15})', caseSensitive: false);
+    final RegExp labelPattern = RegExp(
+      r'IFSC\s*(?:CODE)?\s*[:\-]?\s*([A-Z0-9\s]{11,15})',
+      caseSensitive: false,
+    );
     final labelMatch = labelPattern.firstMatch(text);
     if (labelMatch != null) {
-        final cleanLabelled = labelMatch.group(1)!.replaceAll(RegExp(r'[\s\-]'), '');
-        // Without word boundaries for the cleaned string
-        final RegExp loosePattern = RegExp(r'^[A-Z]{4}[0O][A-Z0-9]{6}$', caseSensitive: false);
-        if (loosePattern.hasMatch(cleanLabelled)) {
-            final code = _normalizeIfsc(cleanLabelled);
-            if (_isValidIfsc(code)) return code;
-        }
+      final cleanLabelled = labelMatch
+          .group(1)!
+          .replaceAll(RegExp(r'[\s\-]'), '');
+      // Without word boundaries for the cleaned string
+      final RegExp loosePattern = RegExp(
+        r'^[A-Z]{4}[0O][A-Z0-9]{6}$',
+        caseSensitive: false,
+      );
+      if (loosePattern.hasMatch(cleanLabelled)) {
+        final code = _normalizeIfsc(cleanLabelled);
+        if (_isValidIfsc(code)) return code;
+      }
     }
 
     // 3. Fallback: strip spaces but enforce strict validation
     final cleanText = text.replaceAll(RegExp(r'[\s\-]'), '');
-    final RegExp loosePattern = RegExp(r'[A-Z]{4}[0O][A-Z0-9]{6}', caseSensitive: false);
+    final RegExp loosePattern = RegExp(
+      r'[A-Z]{4}[0O][A-Z0-9]{6}',
+      caseSensitive: false,
+    );
     final fallbackMatches = loosePattern.allMatches(cleanText);
     for (final match in fallbackMatches) {
-        final code = _normalizeIfsc(match.group(0)!);
-        // Only accept fallback if the prefix is in our known bank map OR the last 6 chars have multiple digits
-        if (_ifscBankMap.containsKey(code.substring(0, 4)) || code.substring(5).replaceAll(RegExp(r'[^\d]'), '').length >= 3) {
-            return code;
-        }
+      final code = _normalizeIfsc(match.group(0)!);
+      // Only accept fallback if the prefix is in our known bank map OR the last 6 chars have multiple digits
+      if (_ifscBankMap.containsKey(code.substring(0, 4)) ||
+          code.substring(5).replaceAll(RegExp(r'[^\d]'), '').length >= 3) {
+        return code;
+      }
     }
 
     return null;
@@ -167,10 +295,10 @@ class PassbookParser {
 
   /// Helper to validate IFSC (must have digits in the last 6 chars to avoid plain words)
   static bool _isValidIfsc(String code) {
-      if (code.length != 11) return false;
-      final last6 = code.substring(5);
-      // Ensure there is at least one digit in the last 6 characters to avoid English words
-      return last6.contains(RegExp(r'\d'));
+    if (code.length != 11) return false;
+    final last6 = code.substring(5);
+    // Ensure there is at least one digit in the last 6 characters to avoid English words
+    return last6.contains(RegExp(r'\d'));
   }
 
   /// Ensures the 5th character is '0', returns uppercase, and fixes common OCR errors
@@ -180,12 +308,16 @@ class PassbookParser {
       upper = upper.replaceRange(4, 5, '0');
     }
     // Auto-correct common OCR misreads for popular bank prefixes
-    if (upper.startsWith('EBIN') || upper.startsWith('S8IN') || upper.startsWith('5BIN')) {
-        upper = 'SBIN' + upper.substring(4);
+    if (upper.startsWith('EBIN') ||
+        upper.startsWith('S8IN') ||
+        upper.startsWith('5BIN')) {
+      upper = 'SBIN' + upper.substring(4);
     } else if (upper.startsWith('HDFO')) {
-        upper = 'HDFC' + upper.substring(4);
+      upper = 'HDFC' + upper.substring(4);
     } else if (upper.startsWith('IC1C')) {
-        upper = 'ICIC' + upper.substring(4);
+      upper = 'ICIC' + upper.substring(4);
+    } else if (upper.startsWith('BIND')) {
+      upper = 'BKID' + upper.substring(4); // 'K' misread as 'IN'
     }
     return upper;
   }
@@ -215,15 +347,21 @@ class PassbookParser {
 
       final match = _accountLabelPattern.firstMatch(line);
       if (match != null) {
-        // Labels shouldn't be full paragraphs/sentences. 
+        // Labels shouldn't be full paragraphs/sentences.
         if (line.length > 60) continue;
 
         // Skip false-positive section headers and unrelated sentences anywhere in the line
-        if (RegExp(r'\b(?:OPENED|DETAILS|TYPE|HOLDER|STATUS|BALANCE|STATEMENT|SUMMARY|DATE|INFORMATION|ABOUT|VALID|SUBJECT|TOWARDS)\b', caseSensitive: false).hasMatch(line)) {
-            // But if the matched label explicitly includes "NO" or "NUMBER", it's probably legitimate, so we don't skip it.
-            if (!RegExp(r'\b(?:NO|NUMBER|NUM|N0)\b', caseSensitive: false).hasMatch(match.group(0)!)) {
-                continue;
-            }
+        if (RegExp(
+          r'\b(?:OPENED|DETAILS|TYPE|HOLDER|STATUS|BALANCE|STATEMENT|SUMMARY|DATE|INFORMATION|ABOUT|VALID|SUBJECT|TOWARDS)\b',
+          caseSensitive: false,
+        ).hasMatch(line)) {
+          // But if the matched label explicitly includes "NO" or "NUMBER", it's probably legitimate, so we don't skip it.
+          if (!RegExp(
+            r'\b(?:NO|NUMBER|NUM|N0)\b',
+            caseSensitive: false,
+          ).hasMatch(match.group(0)!)) {
+            continue;
+          }
         }
 
         print('[PassbookParser] Found Account Label on line: "$line"');
@@ -232,13 +370,18 @@ class PassbookParser {
         final afterLabel = afterLabelRaw.replaceAll(RegExp(r'[\s\-]'), '');
         final sameLineDigits = _digitSequence.firstMatch(afterLabel);
         if (sameLineDigits != null) {
-            final digits = sameLineDigits.group(0)!;
-            if (ifsc != null && ifsc.startsWith('SBIN') && digits.length == 11 && RegExp(r'^[789]').hasMatch(digits)) {
-                print('[PassbookParser] Skipping same-line $digits as it looks like an SBI CIF number.');
-            } else {
-                print('[PassbookParser] Extracted account from same line: $digits');
-                return digits;
-            }
+          final digits = sameLineDigits.group(0)!;
+          if (ifsc != null &&
+              ifsc.startsWith('SBIN') &&
+              digits.length == 11 &&
+              RegExp(r'^[789]').hasMatch(digits)) {
+            print(
+              '[PassbookParser] Skipping same-line $digits as it looks like an SBI CIF number.',
+            );
+          } else {
+            print('[PassbookParser] Extracted account from same line: $digits');
+            return digits;
+          }
         }
 
         List<String> lookaheadCandidates = [];
@@ -253,70 +396,94 @@ class PassbookParser {
           final nextLine = nextLineOrig.replaceAll(RegExp(r'[\s\-]'), '');
           final nextDigits = _digitSequence.firstMatch(nextLine);
           if (nextDigits != null) {
-              final digits = nextDigits.group(0)!;
-              if (ifsc != null && ifsc.startsWith('SBIN') && digits.length == 11 && RegExp(r'^[789]').hasMatch(digits)) {
-                  print('[PassbookParser] Skipping next-line $digits as it looks like an SBI CIF number.');
-                  continue;
-              }
-              lookaheadCandidates.add(digits);
+            final digits = nextDigits.group(0)!;
+            if (ifsc != null &&
+                ifsc.startsWith('SBIN') &&
+                digits.length == 11 &&
+                RegExp(r'^[789]').hasMatch(digits)) {
+              print(
+                '[PassbookParser] Skipping next-line $digits as it looks like an SBI CIF number.',
+              );
+              continue;
+            }
+            lookaheadCandidates.add(digits);
           }
         }
 
         if (lookaheadCandidates.isNotEmpty) {
-            // Sort by length descending, so longest account numbers (usually the true one vs CIF) win.
-            lookaheadCandidates.sort((a, b) {
-                int lenCmp = b.length.compareTo(a.length);
-                if (lenCmp != 0) return lenCmp;
-                // If lengths are equal, prefer numbers starting with 1-6 over 7-9 (common for CIFs)
-                bool aIsAcct = RegExp(r'^[1-6]').hasMatch(a);
-                bool bIsAcct = RegExp(r'^[1-6]').hasMatch(b);
-                if (aIsAcct && !bIsAcct) return -1;
-                if (!aIsAcct && bIsAcct) return 1;
-                return 0;
-            });
-            print('[PassbookParser] Extracted account from lookahead: ${lookaheadCandidates.first}');
-            return lookaheadCandidates.first;
+          // Sort by length descending, so longest account numbers (usually the true one vs CIF) win.
+          lookaheadCandidates.sort((a, b) {
+            int lenCmp = b.length.compareTo(a.length);
+            if (lenCmp != 0) return lenCmp;
+            // If lengths are equal, prefer numbers starting with 1-6 over 7-9 (common for CIFs)
+            bool aIsAcct = RegExp(r'^[1-6]').hasMatch(a);
+            bool bIsAcct = RegExp(r'^[1-6]').hasMatch(b);
+            if (aIsAcct && !bIsAcct) return -1;
+            if (!aIsAcct && bIsAcct) return 1;
+            return 0;
+          });
+          print(
+            '[PassbookParser] Extracted account from lookahead: ${lookaheadCandidates.first}',
+          );
+          return lookaheadCandidates.first;
         }
       }
     }
 
-    print('[PassbookParser] Label extraction failed. Falling back to unlabelled.');
+    print(
+      '[PassbookParser] Label extraction failed. Falling back to unlabelled.',
+    );
     return null;
   }
 
   /// Finds digit sequences that are not phone numbers or IFSC-adjacent.
   static String? _extractUnlabelledAccount(String text, String? ifsc) {
     final candidates = <String>[];
-    
+
     // Strip spaces per line before extracting digits to handle "1234 5678 9012"
     for (final line in text.split('\n')) {
-        // Ignore lines that clearly belong to other IDs
-        if (_ignoreLabelsForAccount.hasMatch(line)) continue;
+      // Ignore lines that clearly belong to other IDs
+      if (_ignoreLabelsForAccount.hasMatch(line)) continue;
 
-        final cleanLine = line.replaceAll(RegExp(r'[\s\-]'), '');
-        final allDigits = _digitSequence.allMatches(cleanLine).toList();
+      final cleanLine = line.replaceAll(RegExp(r'[\s\-]'), '');
+      final allDigits = _digitSequence.allMatches(cleanLine).toList();
 
-        for (final match in allDigits) {
-          final seq = match.group(0)!;
-          // Skip if it looks like a phone number.
-          if (seq.length == 10 && _phonePattern.hasMatch(seq)) continue;
-          // Skip if it is part of the IFSC code.
-          if (ifsc != null && ifsc.contains(seq)) continue;
-          // Skip SBI CIF numbers
-          if (ifsc != null && ifsc.startsWith('SBIN') && seq.length == 11 && RegExp(r'^[789]').hasMatch(seq)) continue;
-          
-          candidates.add(seq);
-        }
+      for (final match in allDigits) {
+        final seq = match.group(0)!;
+        // Skip if it looks like a phone number.
+        if (seq.length == 10 && _phonePattern.hasMatch(seq)) continue;
+        // Skip if it is part of the IFSC code.
+        if (ifsc != null && ifsc.contains(seq)) continue;
+        // Skip SBI CIF numbers
+        if (ifsc != null &&
+            ifsc.startsWith('SBIN') &&
+            seq.length == 11 &&
+            RegExp(r'^[789]').hasMatch(seq))
+          continue;
+
+        candidates.add(seq);
+      }
     }
 
     if (candidates.isEmpty) {
-        print('[PassbookParser] Unlabelled extraction found 0 candidates.');
-        return null;
+      print('[PassbookParser] Unlabelled extraction found 0 candidates.');
+      return null;
     }
-    
-    // Prefer the longest candidate.
-    candidates.sort((a, b) => b.length.compareTo(a.length));
-    print('[PassbookParser] Unlabelled candidates sorted by length: $candidates');
+
+    // Prefer the longest candidate, using starting digits as a tie-breaker.
+    candidates.sort((a, b) {
+      int lenCmp = b.length.compareTo(a.length);
+      if (lenCmp != 0) return lenCmp;
+      // If lengths are equal, prefer numbers starting with 0-6 over 7-9 (common for CIFs)
+      bool aIsAcct = RegExp(r'^[0-6]').hasMatch(a);
+      bool bIsAcct = RegExp(r'^[0-6]').hasMatch(b);
+      if (aIsAcct && !bIsAcct) return -1;
+      if (!aIsAcct && bIsAcct) return 1;
+      return 0;
+    });
+    print(
+      '[PassbookParser] Unlabelled candidates sorted by length/prefix: $candidates',
+    );
     return candidates.first;
   }
 
@@ -325,27 +492,33 @@ class PassbookParser {
   /// Extracts the account holder name using label-first + heuristic.
   static String? _extractName(String text) {
     final lines = text.split('\n');
-    final RegExp relationPattern = RegExp(r'\b[WSDC]/O\b', caseSensitive: false);
+    final RegExp relationPattern = RegExp(
+      r'\b[WSDC]/O\b',
+      caseSensitive: false,
+    );
 
     // Strategy 1: label-based.
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
-      
+
       // Ignore "Wife of", "Son of", "Daughter of" lines
       if (relationPattern.hasMatch(line)) continue;
 
       final match = _nameLabelPattern.firstMatch(line);
       if (match != null) {
         // If the label line explicitly mentions BRANCH or BANK, it is the branch's name/address header, NOT the customer!
-        if (RegExp(r'\b(?:BRANCH|BANK)\b', caseSensitive: false).hasMatch(line)) {
-            continue;
+        if (RegExp(
+          r'\b(?:BRANCH|BANK)\b',
+          caseSensitive: false,
+        ).hasMatch(line)) {
+          continue;
         }
 
         // Use group(1) to get everything AFTER the label, ignoring prefixes
         final afterLabel = match.group(1)!.trim();
         // Remove non-letters to clean up random symbols
         final cleaned = afterLabel.replaceAll(RegExp(r'[^A-Za-z ]'), '').trim();
-        
+
         if (_isValidName(cleaned)) {
           return _cleanNamePrefixes(cleaned).toUpperCase();
         }
@@ -354,8 +527,10 @@ class PassbookParser {
         for (int j = i + 1; j < lines.length && j <= i + 2; j++) {
           final nextLine = lines[j].trim();
           if (nextLine.isEmpty || relationPattern.hasMatch(nextLine)) continue;
-          
-          final cleanedNext = nextLine.replaceAll(RegExp(r'[^A-Za-z ]'), '').trim();
+
+          final cleanedNext = nextLine
+              .replaceAll(RegExp(r'[^A-Za-z ]'), '')
+              .trim();
           if (_isValidName(cleanedNext)) {
             return _cleanNamePrefixes(cleanedNext).toUpperCase();
           }
@@ -366,14 +541,17 @@ class PassbookParser {
 
     // Strategy 2: Honorific prefix heuristic.
     // Extremely reliable: If a line starts with MR., MRS., MS., SHRI., etc., it's almost certainly the name!
-    final RegExp honorificPattern = RegExp(r'^(?:MR\.|MR|MRS\.|MRS|MS\.|MS|MISS|SHRI|SMT\.|SMT|KUMARI)\s+([A-Za-z\s]+)$', caseSensitive: false);
+    final RegExp honorificPattern = RegExp(
+      r'^(?:MR\.|MR|MRS\.|MRS|MS\.|MS|MISS|SHRI|SMT\.|SMT|KUMARI)\s+([A-Za-z\s]+)$',
+      caseSensitive: false,
+    );
     for (final line in lines) {
       final match = honorificPattern.firstMatch(line.trim());
       if (match != null) {
-          final possibleName = match.group(1)!.trim();
-          if (_isValidName(possibleName)) {
-              return _cleanNamePrefixes(line.trim()).toUpperCase();
-          }
+        final possibleName = match.group(1)!.trim();
+        if (_isValidName(possibleName)) {
+          return _cleanNamePrefixes(line.trim()).toUpperCase();
+        }
       }
     }
 
@@ -399,7 +577,7 @@ class PassbookParser {
     if (name.isEmpty || name.length <= 2) return false;
     final words = name.split(RegExp(r'\s+'));
     if (words.length > 5) return false;
-    
+
     final hasExcluded = words.any((w) {
       final cleanWord = w.replaceAll(RegExp(r'[^A-Za-z]'), '').toUpperCase();
       if (cleanWord.isEmpty) return false;
@@ -410,8 +588,11 @@ class PassbookParser {
 
   /// Removes common honorific prefixes from the extracted name
   static String _cleanNamePrefixes(String name) {
-      final RegExp prefixPattern = RegExp(r'^(MR|MRS|MS|SHRI|SMT|DR|KUMARI)\s+', caseSensitive: false);
-      return name.replaceFirst(prefixPattern, '').trim();
+    final RegExp prefixPattern = RegExp(
+      r'^(MR\.|MR|MI|MRS\.|MRS|MS\.|MS|SHRI|SMT\.|SMT|DR\.|DR|KUMARI)\s+',
+      caseSensitive: false,
+    );
+    return name.replaceFirst(prefixPattern, '').trim();
   }
 
   // ── Step 5 – Masking ────────────────────────────────────────────

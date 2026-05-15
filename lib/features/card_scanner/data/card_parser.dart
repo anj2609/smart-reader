@@ -15,26 +15,43 @@ class CardParser {
   // ── Pre-compiled regular expressions (static final) ────────────
 
   /// Matches 13–19 digits possibly separated by spaces, dashes, or dots.
-  static final RegExp _cardNumberPattern = RegExp(
-    r'(?:\d[\d \-\.]{11,22}\d)',
-  );
+  static final RegExp _cardNumberPattern = RegExp(r'(?:\d[\d \-\.]{11,22}\d)');
 
   /// Matches expiry-date-like patterns: MM/YY, MM/YYYY, MM-YY, MM-YYYY.
   static final RegExp _expiryPattern = RegExp(
-    r'(?:^|[\s/\-])(\d{2})\s*[/\-]\s*(\d{2,4})(?:$|[\s/\-])',
+    r'(?<!\d)(\d{2})\s*[/\-]\s*(\d{2,4})(?!\d)',
   );
-
-
 
   /// Matches lines that are entirely upper-case letters and spaces.
   static final RegExp _allCapsLine = RegExp(r'^[A-Z][A-Z ]{2,}$');
 
   /// Keywords commonly found on cards that should be excluded from name.
   static const List<String> _nameExcludeKeywords = [
-    'VALID', 'THRU', 'EXPIRES', 'MEMBER', 'SINCE', 'DEBIT', 'CREDIT',
-    'BANK', 'PLATINUM', 'GOLD', 'VISA', 'MASTERCARD', 'RUPAY', 'CARD',
-    'INTERNATIONAL', 'CLASSIC', 'TITANIUM', 'SIGNATURE', 'WORLD',
-    'ELECTRON', 'MAESTRO', 'AMERICAN', 'EXPRESS', 'FROM', 'THROUGH',
+    'VALID',
+    'THRU',
+    'EXPIRES',
+    'MEMBER',
+    'SINCE',
+    'DEBIT',
+    'CREDIT',
+    'BANK',
+    'PLATINUM',
+    'GOLD',
+    'VISA',
+    'MASTERCARD',
+    'RUPAY',
+    'CARD',
+    'INTERNATIONAL',
+    'CLASSIC',
+    'TITANIUM',
+    'SIGNATURE',
+    'WORLD',
+    'ELECTRON',
+    'MAESTRO',
+    'AMERICAN',
+    'EXPRESS',
+    'FROM',
+    'THROUGH',
   ];
 
   // ── Public API ──────────────────────────────────────────────────
@@ -45,8 +62,7 @@ class CardParser {
   /// set to `null` when parsing fails for a particular field.
   static CardDetails parseCard(String rawText) {
     final cardNumber = _extractCardNumber(rawText);
-    final isValid =
-        cardNumber != null && LuhnValidator.isValidCard(cardNumber);
+    final isValid = cardNumber != null && LuhnValidator.isValidCard(cardNumber);
     final network = cardNumber != null ? _detectNetwork(cardNumber) : null;
     final expiry = _extractExpiry(rawText);
     final name = _extractName(rawText);
@@ -94,8 +110,23 @@ class CardParser {
       if (LuhnValidator.isValidCard(candidate)) return candidate;
     }
 
-    // Fallback: pick the longest digit sequence.
-    candidates.sort((a, b) => b.length.compareTo(a.length));
+    // Fallback: pick the best candidate even if Luhn validation fails (due to OCR errors).
+    candidates.sort((a, b) {
+      // Prefer common card lengths (16 for Visa/MC/RuPay/Discover, 15 for Amex).
+      bool aIsCommon = a.length == 16 || a.length == 15;
+      bool bIsCommon = b.length == 16 || b.length == 15;
+      if (aIsCommon && !bIsCommon) return -1;
+      if (!aIsCommon && bIsCommon) return 1;
+
+      // Prefer known prefixes.
+      bool aHasPrefix = ['4', '5', '6', '34', '37'].any((p) => a.startsWith(p));
+      bool bHasPrefix = ['4', '5', '6', '34', '37'].any((p) => b.startsWith(p));
+      if (aHasPrefix && !bHasPrefix) return -1;
+      if (!aHasPrefix && bHasPrefix) return 1;
+
+      // Otherwise pick the longest sequence.
+      return b.length.compareTo(a.length);
+    });
     return candidates.first;
   }
 
@@ -150,6 +181,30 @@ class CardParser {
       if (result != null) return result;
     }
 
+    // Fallback: if the OCR missed the slash entirely (e.g. "12 25" or "1225"),
+    // search near explicitly labelled lines ("EXPIRE", "VALID", "THRU", etc.).
+    final lines = text.split('\n');
+    for (int i = 0; i < lines.length; i++) {
+      if (RegExp(
+        r'\b(?:EXPIRE|VALID|THRU|UPTO|EXP|EXPIRES)\b',
+        caseSensitive: false,
+      ).hasMatch(lines[i])) {
+        // Check this line and the next line for a loose date pattern.
+        for (int j = i; j <= i + 1 && j < lines.length; j++) {
+          final looseMatches = RegExp(
+            r'(?<!\d)(0[1-9]|1[0-2])\s*[/\\\-\.\s]*\s*(\d{2,4})(?!\d)',
+          ).allMatches(lines[j]);
+          for (final match in looseMatches) {
+            final result = _validateAndNormaliseExpiry(
+              match.group(1)!,
+              match.group(2)!,
+            );
+            if (result != null) return result;
+          }
+        }
+      }
+    }
+
     return null;
   }
 
@@ -169,8 +224,9 @@ class CardParser {
       return null; // 3-digit year is invalid.
     }
 
-    final currentYear = DateTime.now().year % 100;
-    if (y < currentYear) return null; // Past expiry.
+    // We accept any reasonable 2-digit year (e.g. up to 2050)
+    // to ensure we still extract dates from recently expired cards.
+    if (y > 50 && y < 100) return null;
 
     final mm = month.padLeft(2, '0');
     final yy = y.toString().padLeft(2, '0');
