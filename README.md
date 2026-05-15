@@ -14,8 +14,8 @@ DocuScan is a Flutter mobile application that uses Google ML Kit's text recognit
 ### Steps
 1. Clone the repo
    ```bash
-   git clone https://github.com/anj2609/smart-reader.git
-   cd smart-reader
+   git clone https://github.com/anj2609/DocuScan.git
+   cd DocuScan
    ```
 2. Install dependencies
    ```bash
@@ -65,11 +65,11 @@ Full implementation of the modulus-10 checksum algorithm. Strips non-digit chara
 
 - Card numbers are always 13–19 digits (covers all major networks).
 - Cardholder names on cards are printed in ALL CAPS.
-- Passbook account numbers in India are typically 9–18 digits.
-- IFSC codes always follow the standard `[A-Z]{4}0[A-Z0-9]{6}` format.
-- 10-digit numbers starting with 6–9 are treated as phone numbers and excluded from account number candidates.
+- Passbook account numbers are typically 9–18 digits, and the exact length is validated against the bank derived from the IFSC code.
+- IFSC codes always follow the standard `[A-Z]{4}0[A-Z0-9]{6}` format (with fallback OCR correction for 'BIND' -> 'BKID', etc).
+- 10-digit numbers starting with 6–9 are treated as phone numbers, and numbers starting with 1800 are treated as customer care numbers; both are excluded from account candidates.
 - Mixed-script (non-ASCII) lines in passbooks are skipped during parsing.
-- Expiry dates in the past are rejected.
+- Expiry dates from recently expired cards (e.g. up to year 50) are successfully extracted.
 
 ## 🚧 What Was Skipped & Why
 
@@ -122,4 +122,14 @@ lib/
 
 ## 📱 Screenshots
 
-Coming soon...
+<div align="center">
+  <img src="web/icons/main_screen.jpeg" width="200" alt="Main Screen"/>
+  &nbsp;&nbsp;
+  <img src="web/icons/card_scanner.jpeg" width="200" alt="Card Scanner"/>
+  &nbsp;&nbsp;
+  <img src="web/icons/card_example.jpeg" width="200" alt="Card Example"/>
+  &nbsp;&nbsp;
+  <img src="web/icons/passbook_scanner.jpeg" width="200" alt="Passbook Scanner"/>
+  &nbsp;&nbsp;
+  <img src="web/icons/passbook_example.jpeg" width="200" alt="Passbook Example"/>
+</div>
