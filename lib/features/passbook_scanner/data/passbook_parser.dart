@@ -185,6 +185,30 @@ class PassbookParser {
     'AUTH',
   ];
 
+  /// Maps known IFSC prefixes (first 4 letters) to expected account number lengths.
+  static const Map<String, int> _expectedAccountLengths = {
+    'SBIN': 11,
+    'HDFC': 14,
+    'ICIC': 12,
+    'PUNB': 16,
+    'BARB': 14,
+    'UBIN': 15,
+    'KKBK': 14,
+    'AXIS': 15,
+    'UTIB': 15,
+    'IOBA': 15,
+    'CNRB': 13,
+    'BKID': 15,
+    'IDIB': 11,
+    'CBIN': 10,
+    'YESB': 15,
+    'INDB': 13,
+    'FDRL': 14,
+    'MAHB': 11,
+    'UCBA': 14,
+    'PSIB': 14,
+  };
+
   /// Maps known IFSC prefixes (first 4 letters) to bank names.
   static const Map<String, String> _ifscBankMap = {
     'SBIN': 'State Bank of India',
@@ -397,6 +421,9 @@ class PassbookParser {
           final nextDigits = _digitSequence.firstMatch(nextLine);
           if (nextDigits != null) {
             final digits = nextDigits.group(0)!;
+            if (digits.startsWith('1800')) {
+              continue; // Skip toll-free customer care numbers
+            }
             if (ifsc != null &&
                 ifsc.startsWith('SBIN') &&
                 digits.length == 11 &&
@@ -411,13 +438,24 @@ class PassbookParser {
         }
 
         if (lookaheadCandidates.isNotEmpty) {
-          // Sort by length descending, so longest account numbers (usually the true one vs CIF) win.
+          int? expectedLength;
+          if (ifsc != null && ifsc.length >= 4) {
+            expectedLength =
+                _expectedAccountLengths[ifsc.substring(0, 4).toUpperCase()];
+          }
+
           lookaheadCandidates.sort((a, b) {
+            if (expectedLength != null) {
+              bool aMatchesLen = a.length == expectedLength;
+              bool bMatchesLen = b.length == expectedLength;
+              if (aMatchesLen && !bMatchesLen) return -1;
+              if (!aMatchesLen && bMatchesLen) return 1;
+            }
             int lenCmp = b.length.compareTo(a.length);
             if (lenCmp != 0) return lenCmp;
-            // If lengths are equal, prefer numbers starting with 1-6 over 7-9 (common for CIFs)
-            bool aIsAcct = RegExp(r'^[1-6]').hasMatch(a);
-            bool bIsAcct = RegExp(r'^[1-6]').hasMatch(b);
+            // If lengths are equal, prefer numbers starting with 0-6 over 7-9 (common for CIFs)
+            bool aIsAcct = RegExp(r'^[0-6]').hasMatch(a);
+            bool bIsAcct = RegExp(r'^[0-6]').hasMatch(b);
             if (aIsAcct && !bIsAcct) return -1;
             if (!aIsAcct && bIsAcct) return 1;
             return 0;
@@ -450,6 +488,8 @@ class PassbookParser {
 
       for (final match in allDigits) {
         final seq = match.group(0)!;
+        // Skip toll-free numbers.
+        if (seq.startsWith('1800')) continue;
         // Skip if it looks like a phone number.
         if (seq.length == 10 && _phonePattern.hasMatch(seq)) continue;
         // Skip if it is part of the IFSC code.
@@ -470,8 +510,21 @@ class PassbookParser {
       return null;
     }
 
-    // Prefer the longest candidate, using starting digits as a tie-breaker.
+    int? expectedLength;
+    if (ifsc != null && ifsc.length >= 4) {
+      expectedLength =
+          _expectedAccountLengths[ifsc.substring(0, 4).toUpperCase()];
+    }
+
+    // Prefer candidates that match the exact expected length for the bank.
+    // Otherwise fallback to the longest candidate.
     candidates.sort((a, b) {
+      if (expectedLength != null) {
+        bool aMatchesLen = a.length == expectedLength;
+        bool bMatchesLen = b.length == expectedLength;
+        if (aMatchesLen && !bMatchesLen) return -1;
+        if (!aMatchesLen && bMatchesLen) return 1;
+      }
       int lenCmp = b.length.compareTo(a.length);
       if (lenCmp != 0) return lenCmp;
       // If lengths are equal, prefer numbers starting with 0-6 over 7-9 (common for CIFs)
