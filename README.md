@@ -122,14 +122,6 @@ lib/
 
 ## 📱 Screenshots
 
-<div align="center">
-  <img src="web/icons/main_screen.jpeg" width="200" alt="Main Screen"/>
-  &nbsp;&nbsp;
-  <img src="web/icons/card_scanner.jpeg" width="200" alt="Card Scanner"/>
-  &nbsp;&nbsp;
-  <img src="web/icons/card_example.jpeg" width="200" alt="Card Example"/>
-  &nbsp;&nbsp;
-  <img src="web/icons/passbook_scanner.jpeg" width="200" alt="Passbook Scanner"/>
-  &nbsp;&nbsp;
-  <img src="web/icons/passbook_example.jpeg" width="200" alt="Passbook Example"/>
-</div>
+| Main Screen | Card Scanner | Card Example | Passbook Scanner | Passbook Example |
+| :---: | :---: | :---: | :---: | :---: |
+| ![Main Screen](web/icons/main_screen.jpeg) | ![Card Scanner](web/icons/card_scanner.jpeg) | ![Card Example](web/icons/card_example.jpeg) | ![Passbook Scanner](web/icons/passbook_scanner.jpeg) | ![Passbook Example](web/icons/passbook_example.jpeg) |
