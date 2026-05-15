@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:image/image.dart' as img;
 
 void main() {
-  final file = File('web/icons/banking-system.png');
+  final file = File('web/icons/banking-system-extracted.png');
   if (!file.existsSync()) {
     print('File not found.');
     return;
